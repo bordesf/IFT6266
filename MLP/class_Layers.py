@@ -65,7 +65,6 @@ class Hidden_Layer(Layer):
     #Link the Hidden_Layer to the next Layer
     def __init__(self, n_in, nb_units, activ):
         Layer.__init__(self, n_in, nb_units, activ)
-        self.a = 0.25
 
     def attach(self, Layer_next):
         self.layer_next = Layer_next
@@ -83,4 +82,5 @@ class Hidden_Layer(Layer):
         grad_h = grad_hs * self.activation_derivate(self.outputs)
         grad_W = np.dot(grad_h.T, x)
         grad_b = grad_h.sum(axis=0)
+        self.cost = grad_h
         return grad_W, grad_b

@@ -16,12 +16,14 @@ def load_mnist():
 class MLP(object):
 
     #Initialization of the MLP
-    def __init__(self, n_in, n_units, n_out, activ):
+    def __init__(self, units, activ):
         self.layers = []
-        self.layers.append(Hidden_Layer(n_in, n_units, activ))
-        self.layers.append(Output_Layer(n_units, n_out, utils.softmax_batch))
-        self.layers[0].attach(self.layers[-1])
-        self.layers[-1].attach(self.layers[0])
+        for i in range(len(units) - 2):
+            self.layers.append(Hidden_Layer(units[i], units[i+1], activ))
+        self.layers.append(Output_Layer(units[-2], units[-1], utils.softmax_batch))
+        for l in range(len(self.layers) - 1):
+            self.layers[l].attach(self.layers[l + 1])
+        self.layers[-1].attach(self.layers[-1])
         self.X, self.Y = load_mnist()
 
     #Test function that compute the average error
@@ -52,6 +54,7 @@ class MLP(object):
             #Train on each batch
             for i in range(nb_batch - 1):
                 inputs = []
+                grads = []
                 #Compute the bounds
                 low = i*batch_size
                 up = batch_size*(i+1)
@@ -60,11 +63,14 @@ class MLP(object):
                 for layer in self.layers:
                     inputs.append(layer.forward_propagation(inputs[-1]))
                 #Backward propagation
-                grad_W2, grad_b2 = self.layers[1].backward_propagation(y[low:up], inputs[-2])
-                grad_W1, grad_b1 = self.layers[0].backward_propagation(x[low:up])
+                grads = [self.layers[-1].backward_propagation(y[low:up], inputs[-2])] + grads
+                for index in reversed(range(len(self.layers) - 1)):
+                    grads = [self.layers[index].backward_propagation(inputs[index])] + grads
                 #Weights and bias update with weight decay
-                self.layers[0].update_parameters(l, m, grad_W1, grad_b1)
-                self.layers[1].update_parameters(l, m, grad_W2, grad_b2)
+                a = iter(grads)
+                for layer in self.layers:
+                    grad_W, grad_b = next(a)
+                    layer.update_parameters(l, m, grad_W, grad_b)
             nbepoch = nbepoch + 1
             #Test the network
             errTrain.append(self.test(x,y))
